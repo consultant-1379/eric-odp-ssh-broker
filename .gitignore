@@ -1,0 +1,38 @@
+HELP.md
+/target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### VS Code ###
+.vscode/
+
+### BOB Temporary Files/Folders ###
+.bob.env
+.bob/
+.bob*/
+k8s-logs/
+build
+
+### SonarQube Working Directory ###
+?/
+
+### Spinnaker Temporary Properties ###
+artifact.properties
+
+### REST2HTML Artifacts ###
+rest2html*.zip
+rest_conversion_log.txt
+**/*.zip
+
+### index.html & openapi sha256 files
+src/main/resources/v1/index.html
+src/main/resources/v1/.openapi-generator/*openapi.yaml.sha256
+
+### ignore CI-Jenkinsfiles
+ci/common_precodereview.Jenkinsfile
+ci/common_ruleset2.0.yaml

@@ -1,0 +1,362 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+        "affinity": {
+            "properties": {
+                "podAntiAffinity": {
+                    "type": "string"
+                },
+                "topologyKey": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "annotations": {
+            "properties": {},
+            "type": "object"
+        },
+        "appArmorProfile": {
+            "properties": {
+                "type": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "container": {
+            "properties": {
+                "ports": {
+                    "properties": {
+                        "health": {
+                            "type": "integer"
+                        },
+                        "metrics": {
+                            "type": "integer"
+                        }
+                    },
+                    "type": "object"
+                }
+            },
+            "type": "object"
+        },
+        "extraEnv": {
+            "type": "array"
+        },
+        "extraInitContainers": {
+            "type": "array"
+        },
+        "extraInitContainersTemplate": {
+            "type": ["object","null"],
+            "properties": {
+                "template": { "type": "string" }
+            },
+            "additionalProperties": true
+        },
+        "extraVolumeMounts": {
+            "type": "array"
+        },
+        "extraVolumes": {
+            "type": "array"
+        },
+        "factory": {
+            "properties": {
+                "caSecret": {
+                    "type": ["null", "string"]
+                },
+                "certSecret": {
+                    "type": ["null", "string"]
+                },
+                "url": {
+                    "type": ["null", "string"]
+                }
+            },
+            "type": "object"
+        },
+        "image": {
+            "properties": {
+                "pullPolicy": {
+                    "type": "string"
+                },
+                "repository": {
+                    "type": "string"
+                },
+                "tag": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "imageCredentials": {
+            "properties": {
+                "pullSecret": {
+                    "type": ["null", "string"]
+                },
+                "repoPath": {
+                    "type": ["object", "string", "null"]
+                }
+            },
+            "type": "object"
+        },
+        "labels": {
+            "properties": {},
+            "type": "object"
+        },
+        "ldap": {
+            "properties": {
+                "caSecret": {
+                    "type": ["null", "string"]
+                },
+                "url": {
+                    "type": ["null", "string"]
+                },
+                "userDn": {
+                    "type": ["null", "string"]
+                }
+            },
+            "type": "object"
+        },
+        "podDisruptionBudget": {
+            "properties": {
+                "minAvailable": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "podPriority": {
+            "properties": {
+                "sshbroker": {
+                    "properties": {
+                        "priorityClassName": {
+                            "type": "string"
+                        }
+                    },
+                    "type": "object"
+                }
+            },
+            "type": "object"
+        },
+        "probes": {
+            "properties": {
+                "sshbroker": {
+                    "properties": {
+                        "livenessProbe": {
+                            "properties": {
+                                "failureThreshold": {
+                                    "type": "integer"
+                                },
+                                "initialDelaySeconds": {
+                                    "type": "integer"
+                                },
+                                "periodSeconds": {
+                                    "type": "integer"
+                                },
+                                "timeoutSeconds": {
+                                    "type": "integer"
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "readinessProbe": {
+                            "properties": {
+                                "failureThreshold": {
+                                    "type": "integer"
+                                },
+                                "initialDelaySeconds": {
+                                    "type": "integer"
+                                },
+                                "periodSeconds": {
+                                    "type": "integer"
+                                },
+                                "successThreshold": {
+                                    "type": "integer"
+                                },
+                                "timeoutSeconds": {
+                                    "type": "integer"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "type": "object"
+                }
+            },
+            "type": "object"
+        },
+        "prometheus": {
+            "properties": {
+                "scrape_interval": {
+                    "type": "string"
+                },
+                "scrape_role": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "replicaCount": {
+            "type": "integer"
+        },
+        "resources": {
+            "properties": {
+                "eric-odp-ssh-broker": {
+                    "properties": {
+                        "limits": {
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "ephemeral-storage": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "requests": {
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "ephemeral-storage": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "type": "object"
+                },
+                "logshipper": {
+                    "properties": {
+                        "limits": {
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "requests": {
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "type": "object"
+                }
+            },
+            "type": "object"
+        },
+        "seccompProfile": {
+            "properties": {
+                "type": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "service": {
+            "properties": {
+                "ssh": {
+                    "properties": {
+                        "port": {
+                            "type": "integer"
+                        }
+                    },
+                    "type": "object"
+                },
+                "type": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "ssh": {
+            "properties": {
+                "applications": {
+                    "items": {
+                        "properties": {
+                            "application": {
+                                "type": "string"
+                            },
+                            "port": {
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "type": "array"
+                },
+                "hostKeySecret": {
+                    "type": ["null", "string"]
+                },
+                "tokenDataField": {
+                    "type": ["null", "string"]
+                },
+                "tokenTypes": {
+                    "type": ["null", "array"]
+                }
+            },
+            "type": "object"
+        },
+        "sso": {
+            "properties": {
+                "caSecret": {
+                    "type": ["null", "string"]
+                },
+                "certSecret": {
+                    "type": ["null", "string"]
+                },
+                "url": {
+                    "type": ["null", "string"]
+                }
+            },
+            "type": "object"
+        },
+        "terminationGracePeriodSeconds": {
+            "type": "integer"
+        },
+        "tolerations": {
+            "type": "array"
+        },
+        "topologySpreadConstraints": {
+            "type": "array"
+        },
+        "updateStrategy": {
+            "properties": {
+                "rollingUpdate": {
+                    "properties": {
+                        "maxSurge": {
+                            "type": "integer"
+                        },
+                        "maxUnavailable": {
+                            "type": "integer"
+                        }
+                    },
+                    "type": "object"
+                },
+                "type": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "type": "object"
+}

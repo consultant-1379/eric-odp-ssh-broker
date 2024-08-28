@@ -1,0 +1,33 @@
+{{- range $index, $app := .Values.ssh.applications }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "eric-odp-ssh-broker.name" $ }}-{{ $app.application }}
+  labels: {{- include "eric-odp-ssh-broker.labels" $ | indent 4 }}
+  annotations:
+{{- if eq $index 0 }}
+{{- include "eric-odp-ssh-broker.annotations-service" $ | indent 4 }}
+{{- else }}
+{{- include "eric-odp-ssh-broker.annotations" $ | indent 4 }}
+{{- end }}
+spec:
+  type: {{ $.Values.service.type }}
+  ports:
+    - name: ssh
+      port: {{ $.Values.service.ssh.port }}
+      targetPort: {{ $app.port }}
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ template "eric-odp-ssh-broker.name" $ }}
+    app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+  ipFamilyPolicy: PreferDualStack
+  {{- if (eq (include "eric-odp-ssh-broker.internalIPFamily" $) "IPv4") }}
+  ipFamilies: ["IPv4"]
+  {{- else if (eq (include "eric-odp-ssh-broker.internalIPFamily" $) "IPv6") }}
+  ipFamilies: ["IPv6"]
+  {{- end }}
+
+{{- end }}

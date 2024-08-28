@@ -1,0 +1,302 @@
+{{- $g := fromJson (include "eric-odp-ssh-broker.global" .) -}}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "eric-odp-ssh-broker.name" . }}
+  labels:
+{{- include "eric-odp-ssh-broker.labels" . | indent 4 }}
+  annotations:
+    {{- include "eric-odp-ssh-broker.annotations" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "eric-odp-ssh-broker.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+  strategy:
+    type: {{ .Values.updateStrategy.type }}
+    {{- if and (eq .Values.updateStrategy.type "RollingUpdate") .Values.updateStrategy.rollingUpdate }}
+    rollingUpdate:
+{{- if .Values.updateStrategy.rollingUpdate.maxUnavailable }}
+      maxUnavailable: {{ .Values.updateStrategy.rollingUpdate.maxUnavailable }}
+{{- end }}
+{{- if .Values.updateStrategy.rollingUpdate.maxSurge }}
+      maxSurge: {{ .Values.updateStrategy.rollingUpdate.maxSurge }}
+{{- end }}
+    {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "eric-odp-ssh-broker.labels" . | indent 8 }}
+      annotations:
+        {{- $appArmorAnn := include "eric-odp-ssh-broker.appArmorAnnotations" . | fromYaml -}}
+        {{- $commonAnn := include "eric-odp-ssh-broker.annotations" . | fromYaml -}}
+        {{- $promAnn := include "eric-odp-ssh-broker.prometheus" . | fromYaml -}}
+        {{- include "eric-odp-ssh-broker.mergeAnnotations" (dict "location" .Template.Name "sources" (list $appArmorAnn $commonAnn $promAnn )) | trim | nindent 8 }}
+    spec:
+    {{- if .Values.podPriority }}
+    {{- if .Values.podPriority.sshbroker.priorityClassName }}
+      priorityClassName: {{ .Values.podPriority.sshbroker.priorityClassName | quote }}
+    {{- end }}
+    {{- end }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "eric-odp-ssh-broker.name" . }}
+            items:
+              - key: LOG_CTRL_FILE
+                path: logcontrol.json
+        {{- if .Values.ldap.credsSecret }}
+        - name: ldap-creds
+          secret:
+            secretName: {{ .Values.ldap.credsSecret }}
+        {{- end }}
+        {{- if .Values.ldap.caSecret }}
+        - name: ldap-ca
+          secret:
+            secretName: {{ .Values.ldap.caSecret }}
+        {{- end }}
+        {{- if .Values.factory.certSecret }}
+        - name: factory-cert
+          secret:
+            secretName: {{ .Values.factory.certSecret }}
+        {{- end }}
+        {{- if  .Values.factory.caSecret }}
+        - name: factory-ca
+          secret:
+            secretName: {{ .Values.factory.caSecret }}
+        {{- end }}
+        {{- if .Values.ssh.hostKeySecret }}
+        - name: ssh-hostkey
+          secret:
+            secretName: {{ .Values.ssh.hostKeySecret }}
+        {{- end }}
+        {{- if .Values.sso.caSecret }}
+        - name: sso-ca
+          secret:
+            secretName: {{ .Values.sso.caSecret }}
+        {{- end }}
+        {{- if eq "true" (include "eric-odp-ssh-broker.log-streaming-activated" .) }}
+          {{- include "eric-log-shipper-sidecar.log-shipper-sidecar-volumes" . | indent 8 }}
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+          {{- .Values.extraVolumes | toYaml | nindent 8 }}
+        {{- end }}
+      {{- if include "eric-odp-ssh-broker.pullSecrets" . }}
+      imagePullSecrets:
+        - name: {{ template "eric-odp-ssh-broker.pullSecrets" . }}
+      {{- end }}
+      {{- if (or .Values.nodeSelector $g.nodeSelector) }}
+      nodeSelector:
+        {{- include "eric-odp-ssh-broker.nodeSelector" . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints: {{ toYaml .Values.topologySpreadConstraints | nindent 8 }}
+      {{- if eq .Values.affinity.podAntiAffinity "hard" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - {{ include "eric-odp-ssh-broker.name" . }}
+              topologyKey: {{ .Values.affinity.topologyKey }}
+      {{- else if eq .Values.affinity.podAntiAffinity  "soft" }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - {{ include "eric-odp-ssh-broker.name" . }}
+                topologyKey: {{ .Values.affinity.topologyKey }}
+      {{- end }}
+      tolerations: {{ include "eric-odp-ssh-broker.merge-tolerations" (dict "root" .) | nindent 8 }}
+      {{- if or .Values.extraInitContainers .Values.extraInitContainersTemplate }}
+      initContainers:
+        {{- if or .Values.extraInitContainers }}
+          {{- toYaml .Values.extraInitContainers | nindent 8 }}
+        {{- else }}
+          {{- include .Values.extraInitContainersTemplate.template . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ template "eric-odp-ssh-broker.mainImagePath" . }}
+          imagePullPolicy: {{ template "eric-odp-ssh-broker.imagePullPolicy" . }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            privileged: false
+            runAsNonRoot: true
+            runAsGroup: 157772
+            capabilities:
+              drop:
+                - all
+
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/sshbroker
+            {{- if .Values.ldap.caSecret }}
+            - name: ldap-ca
+              mountPath: /run/secrets/ldapca
+              readOnly: true
+            {{- end }}
+            {{- if .Values.factory.certSecret }}
+            - name: factory-cert
+              mountPath: /run/secrets/factorycrt
+              readOnly: true
+            {{- end }}
+            {{- if .Values.factory.caSecret }}
+            - name: factory-ca
+              mountPath: /run/secrets/factoryca
+              readOnly: true
+            {{- end }}
+            {{- if .Values.ssh.hostKeySecret }}
+            - name: ssh-hostkey
+              mountPath: /run/secrets/sshhostkey
+              readOnly: true
+            {{- end }}
+            {{- if .Values.sso.caSecret }}
+            - name: sso-ca
+              mountPath: /run/secrets/ssoca
+              readOnly: true
+            {{- end }}
+            {{- if eq "true" (include "eric-odp-ssh-broker.log-streaming-activated" .) }}
+                {{- include "eric-log-shipper-sidecar.log-shipper-sidecar-mounts" . | indent 12 }}
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+              {{- .Values.extraVolumeMounts | toYaml | nindent 12 }}
+            {{- end }}
+          env:
+            - name: HEALTH_CHECK_PORT
+              value: {{ .Values.container.ports.health | quote }}
+            - name: METRICS_PORT
+              value: {{ .Values.container.ports.metrics | quote }}
+            - name: LOG_CTRL_FILE
+              value: "/etc/sshbroker/logcontrol.json"
+            - name: LOG_STREAMING_METHOD
+              value: {{ include "eric-odp-ssh-broker.log-streamingMethod" . }}
+            {{- if eq "true" (include "eric-odp-ssh-broker.log-streaming-activated" .) }}
+            - name: LOG_FILE
+              value: "/logs/sshbroker.log"
+            {{- end }}
+            - name: NAMESPACE
+              value: "{{ .Release.Namespace }}"
+            {{- if .Values.ldap.url }}
+            - name: LDAP_URL
+              value: "{{ .Values.ldap.url }}"
+            {{- if .Values.ldap.caSecret }}
+            - name: LDAP_TLS_CA
+              value: "/run/secrets/ldapca/tls.crt"
+            {{- end }}
+            - name: LDAP_USER_DN
+              value: "{{ .Values.ldap.userDn }}"
+            {{- end }} # End of if .Values.ldap.url
+            {{- if .Values.sso.url }}
+            - name: SSO_URL
+              value: "{{ .Values.sso.url }}"
+            {{- end }}
+            {{- if .Values.sso.caSecret }}
+            - name: SSO_CA_FILE
+              value: "/run/secrets/ssoca/tls.crt"
+            {{- end }}
+            {{- if .Values.sso.caBroken }}
+            - name: SSO_CA_BROKEN
+              value: "true"
+            {{- end }}
+            {{- if .Values.factory.url }}
+            - name: FACTORY_URL
+              value: "{{ .Values.factory.url }}"
+            {{- end }}
+            {{- if .Values.factory.certSecret }}
+            - name: FACTORY_CERT_FILE
+              value: "/run/secrets/factorycrt/tls.crt"
+            - name: FACTORY_KEY_FILE
+              value: "/run/secrets/factorycrt/tls.key"
+            {{- end }}
+            {{- if .Values.factory.caSecret }}
+            - name: FACTORY_CA_FILE
+              value: "/run/secrets/factoryca/tls.crt"
+            {{- end }}
+            {{- if .Values.factory.maxRequests }}
+            - name: FACTORY_MAX_REQUESTS
+              value: "{{ .Values.factory.maxRequests }}"
+            {{- end }}
+            {{- if .Values.factory.maxRequests }}
+            - name: FACTORY_REQUEST_INTERVAL
+              value: "{{ .Values.factory.requestInterval }}"
+            {{- end }}
+            {{- if .Values.ssh.hostKeySecret }}
+            - name: SSH_HOST_KEY_FILE
+              value: "/run/secrets/sshhostkey/id_rsa"
+            {{- end }}
+            - name: SSH_PORTS
+              value: {{ include "eric-odp-ssh-broker.ssh-ports" . | quote }}
+            - name: SSH_APPLICATIONS
+              value: {{ include "eric-odp-ssh-broker.ssh-apps" . | quote }}
+            - name: SSH_TOKEN_TYPES
+              value: {{ .Values.ssh.tokenTypes | quote }}
+            - name: SSH_TOKEN_DATA_FIELD
+              value: {{ .Values.ssh.tokenDataField | quote }}
+            {{- if .Values.ssh.tokenDataFieldB64 }}
+            - name: SSH_TOKEN_DATA_FIELD_B64
+              value: "true"
+            {{- end }}
+            {{- if .Values.ssh.odpPort }}
+            - name: SSH_ODP_PORT
+              value: {{ .Values.ssh.odpPort | quote }}
+            {{- end }}
+            {{- if .Values.ssh.channelOpenTimeout }}
+            - name: SSH_CHANNEL_OPEN_TIMEOUT
+              value: "{{ .Values.ssh.channelOpenTimeout }}"
+            {{- end }}
+            {{- if .Values.ssh.maxConnections }}
+            - name: SSH_MAX_CONNECTIONS
+              value: "{{ .Values.ssh.maxConnections }}"
+            {{- end }}
+            {{- if .Values.extraEnv }}
+              {{- .Values.extraEnv | toYaml | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: probe-port
+              containerPort: {{ .Values.container.ports.health }}
+              protocol: TCP
+          {{- if not $g.security.tls.enabled }}
+            - name: http-metrics
+              containerPort: {{ .Values.container.ports.metrics }}
+              protocol: TCP
+          {{- else }}
+            - name: https-metrics
+              containerPort: {{ .Values.container.ports.metrics }}
+              protocol: TCP
+          {{- end }}
+          {{- range $index, $app := .Values.ssh.applications }}
+            - name: ssh-{{ $app.application }}
+              containerPort: {{ $app.port }}
+              protocol: TCP
+          {{- end }}
+          resources:
+          {{- include "eric-odp-ssh-broker.containerResources" (index .Values "resources" "eric-odp-ssh-broker") | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: {{ .Values.container.ports.health }}
+{{ toYaml (index .Values "probes" "sshbroker" "livenessProbe") | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: {{ .Values.container.ports.health }}
+{{ toYaml (index .Values "probes" "sshbroker" "readinessProbe") | indent 12 }}
+{{- if eq "true" (include "eric-odp-ssh-broker.log-streaming-activated" .) }}
+  {{- $logshipperImageDict := dict "logshipperSidecarImage" ((((.Values).global).logShipper).config).image -}}
+  {{- include "eric-log-shipper-sidecar.log-shipper-sidecar-container" (mergeOverwrite . $logshipperImageDict ) | indent 8 }}
+{{- end }}

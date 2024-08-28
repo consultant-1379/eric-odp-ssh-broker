@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "eric-odp-ssh-broker.name" . }}
+  labels: {{- include "eric-odp-ssh-broker.labels" . | nindent 4 }}
+  annotations: {{- include "eric-odp-ssh-broker.annotations" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable | quote }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "eric-odp-ssh-broker.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
